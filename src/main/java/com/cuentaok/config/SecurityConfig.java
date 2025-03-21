@@ -17,7 +17,7 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable()) // 🚨 Desactiva CSRF para evitar bloqueos en Postman
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/users/register", "/api/users/verify", "/api/users/resend-verification","/api/users/login").permitAll()
+                        .requestMatchers("/api/users/register", "/api/users/verify", "/api/users/resend-verification","/api/users/login", "/api/users/refresh").permitAll()
                         .anyRequest().authenticated() // Bloquear el resto si no está autenticado
 
                 )

@@ -2,6 +2,7 @@ package com.cuentaok.controller;
 import com.cuentaok.dto.UserRequest;
 
 import com.cuentaok.model.User;
+import com.cuentaok.service.JwtService;
 import com.cuentaok.service.UserService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -13,9 +14,11 @@ import java.util.Map;
 public class UserController {
 
     private final UserService userService;
+    private final JwtService jwtService;
 
-    public UserController(UserService userService) {
+    public UserController(UserService userService, JwtService jwtService) {
         this.userService = userService;
+        this.jwtService = jwtService;
     }
 
     @PostMapping("/register")
@@ -51,5 +54,18 @@ public class UserController {
     @PostMapping("/login")
     public ResponseEntity<Map<String, String>> login(@RequestBody UserRequest request) {
         return ResponseEntity.ok(userService.login(request.getEmail(), request.getPassword()));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<Map<String, String>> refreshAccessToken(@RequestBody Map<String, String> request) {
+        String refreshToken = request.get("refreshToken");
+        if (refreshToken == null || !jwtService.isTokenValid(refreshToken)) {
+            return ResponseEntity.status(401).body(Map.of("error", "Invalid or expired refresh token"));
+        }
+
+        String email = jwtService.extractEmail(refreshToken);
+        String newAccessToken = jwtService.generateToken(email);
+
+        return ResponseEntity.ok(Map.of("accessToken", newAccessToken));
     }
 }
