@@ -1,29 +1,82 @@
-package com.cuentaok.config;
+package com.cuentaok.security;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.authorization.AuthorizationDecision;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.web.SecurityFilterChain;
-
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 public class SecurityConfig {
 
+    private final JwtAuthFilter jwtAuthFilter;
+    private final UserDetailsService userDetailsService;
+
+    @Value("${app.security.roles-enabled}")
+    private boolean rolesEnabled;
+
+    public SecurityConfig(JwtAuthFilter jwtAuthFilter, UserDetailsService userDetailsService) {
+        this.jwtAuthFilter = jwtAuthFilter;
+        this.userDetailsService = userDetailsService;
+    }
+
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                .csrf(csrf -> csrf.disable()) // 🚨 Desactiva CSRF para evitar bloqueos en Postman
-                .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/users/register", "/api/users/verify", "/api/users/resend-verification","/api/users/login", "/api/users/refresh").permitAll()
-                        .anyRequest().authenticated() // Bloquear el resto si no está autenticado
+                .csrf(csrf -> csrf.disable())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> {
+                    auth.requestMatchers("/api/auth/**").permitAll();
+                    auth.requestMatchers("/api/norole/**").permitAll();
 
-                )
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+                    auth.requestMatchers("/api/admin/**").access((authenticationSupplier, requestContext) -> {
+                        Authentication authentication = authenticationSupplier.get(); // Obtener Authentication real
+                        return new AuthorizationDecision(
+                                rolesEnabled && authentication != null && authentication.isAuthenticated() &&
+                                        authentication.getAuthorities().stream()
+                                                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))
+                        );
+                    });
+
+                    auth.requestMatchers("/api/users/**").access((authenticationSupplier, requestContext) -> {
+                        Authentication authentication = authenticationSupplier.get(); // Obtener Authentication real
+                        return new AuthorizationDecision(
+                                rolesEnabled && authentication != null && authentication.isAuthenticated() &&
+                                        authentication.getAuthorities().stream()
+                                                .anyMatch(a -> a.getAuthority().equals("ROLE_USER"))
+                        );
+                    });
+
+                    auth.anyRequest().authenticated();
+                })
+                .authenticationProvider(authenticationProvider())
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
+    }
+
+    @Bean
+    public AuthenticationProvider authenticationProvider() {
+        DaoAuthenticationProvider authProvider = new DaoAuthenticationProvider();
+        authProvider.setUserDetailsService(userDetailsService);
+        authProvider.setPasswordEncoder(passwordEncoder());
+        return authProvider;
+    }
+
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+        return config.getAuthenticationManager();
     }
 
     @Bean

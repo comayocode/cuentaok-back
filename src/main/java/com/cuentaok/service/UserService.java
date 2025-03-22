@@ -56,7 +56,7 @@ public class UserService {
     }
 
     private void sendVerificationEmail(String email, String token) {
-        String url = "http://localhost:8080/api/users/verify?token=" + token;
+        String url = "http://localhost:8080/api/auth/verify?token=" + token;
         String subject = "Verifica tu cuenta";
         String message = "<p>Gracias por registrarte. Haz clic en el siguiente enlace para verificar tu cuenta:</p>"
                 + "<a href=\"" + url + "\">Verificar cuenta</a>";
