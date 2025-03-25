@@ -68,4 +68,19 @@ public class UserController {
 
         return ResponseEntity.ok(Map.of("accessToken", newAccessToken));
     }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<String> forgotPassword(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+        userService.requestPasswordReset(email);
+        return ResponseEntity.ok("Se ha enviado un enlace de recuperación a tu correo.");
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<String> resetPassword(@RequestBody Map<String, String> request) {
+        String token = request.get("token");
+        String newPassword = request.get("newPassword");
+        userService.resetPassword(token, newPassword);
+        return ResponseEntity.ok("Tu contraseña ha sido actualizada correctamente.");
+    }
 }

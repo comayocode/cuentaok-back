@@ -1,5 +1,7 @@
 package com.cuentaok.service;
 
+import com.cuentaok.model.PasswordResetToken;
+import com.cuentaok.repository.PasswordResetTokenRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import com.cuentaok.model.User;
 import com.cuentaok.repository.UserRepository;
@@ -24,16 +26,17 @@ public class UserService {
     private final UserRepository userRepository;
     private final VerificationTokenRepository tokenRepository;
     private final JavaMailSender mailSender;
-
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository userRepository, VerificationTokenRepository tokenRepository, JavaMailSender mailSender, JwtService jwtService, PasswordEncoder passwordEncoder) {
+    public UserService(UserRepository userRepository, VerificationTokenRepository tokenRepository, JavaMailSender mailSender, JwtService jwtService, PasswordEncoder passwordEncoder, PasswordResetTokenRepository passwordResetTokenRepository) {
         this.userRepository = userRepository;
         this.tokenRepository = tokenRepository;
         this.mailSender = mailSender;
         this.jwtService = jwtService;
         this.passwordEncoder = passwordEncoder;
+        this.passwordResetTokenRepository = passwordResetTokenRepository;
     }
 
     public User registerUser(String email, String password) {
@@ -126,5 +129,57 @@ public class UserService {
         tokens.put("refreshToken", refreshToken);
         return tokens;
     }
+
+    public void requestPasswordReset(String email) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        // Eliminar cualquier token previo del usuario
+        passwordResetTokenRepository.findByUserId(user.getId()).ifPresent(passwordResetTokenRepository::delete);
+
+        // Generar y guardar un nuevo token
+        PasswordResetToken resetToken = PasswordResetToken.generate(user);
+        passwordResetTokenRepository.save(resetToken);
+
+        // Enviar email para resetear contraseña
+        sendPasswordResetEmail(user.getEmail(), resetToken.getToken());
+    }
+
+    private void sendPasswordResetEmail(String email, String token) {
+        String url = "http://localhost:8080/api/auth/reset-password?token=" + token;
+        String subject = "Restablecer contraseña";
+        String message = "<p>Haz clic en el siguiente enlace para restablecer tu contraseña:</p>"
+                + "<a href=\"" + url + "\">Restablecer contraseña</a>";
+
+        try {
+            MimeMessage mail = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(mail, true);
+            helper.setTo(email);
+            helper.setSubject(subject);
+            helper.setText(message, true);
+            mailSender.send(mail);
+        } catch (MessagingException e) {
+            throw new RuntimeException("Error al enviar el email");
+        }
+    }
+
+    public void resetPassword(String token, String newPassword) {
+        PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(token)
+                .orElseThrow(() -> new RuntimeException("Token inválido o expirado"));
+
+        // Verificar que el token no haya expirado
+        if (resetToken.isExpired()) {
+            throw new RuntimeException("Token expirado");
+        }
+
+        // Actualizar la contraseña del usuario
+        User user = resetToken.getUser();
+        user.setPassword(passwordEncoder.encode(newPassword));
+        userRepository.save(user);
+
+        // Eliminar el token usado
+        passwordResetTokenRepository.delete(resetToken);
+    }
+
 
 }
