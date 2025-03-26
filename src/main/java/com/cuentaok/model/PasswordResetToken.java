@@ -33,7 +33,7 @@ public class PasswordResetToken {
         return PasswordResetToken.builder()
                 .token(UUID.randomUUID().toString())
                 .user(user)
-                .expirationDate(LocalDateTime.now().plusHours(1))
+                .expirationDate(LocalDateTime.now().plusMinutes(15))
                 .build();
     }
 

@@ -6,6 +6,8 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
+
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Set;
@@ -29,6 +31,18 @@ public class User implements UserDetails {
 
     @Column(nullable = false)
     private boolean verified;
+
+    @Column(nullable = false)
+    private boolean accountLocked = false;
+
+    @Column
+    private LocalDateTime lockUntil;
+
+    @Column(nullable = false)
+    private int resetAttempts = 0;
+
+    @Column(nullable = false)
+    private int failedLoginAttempts = 0;
 
     public User(String email, String password, boolean verified) {
         this.email = email;
