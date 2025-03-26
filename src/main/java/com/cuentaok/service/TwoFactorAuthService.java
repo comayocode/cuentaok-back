@@ -20,16 +20,16 @@ public class TwoFactorAuthService {
 
 
     @Transactional
-    public void generateAndSend2FACode(User user) {
+    public LocalDateTime generateAndSend2FACode(User user) {
         // Generar código de 6 dígitos
         String code = String.format("%06d", new Random().nextInt(1000000));
 
         // Buscar si el usuario ya tiene un código previo
         Optional<TwoFactorAuth> existingAuth = twoFactorAuthRepository.findByUser(user);
-
-        TwoFactorAuth twoFactorAuth = existingAuth.orElseGet(() -> new TwoFactorAuth());
+        TwoFactorAuth twoFactorAuth = existingAuth.orElseGet(TwoFactorAuth::new);
         twoFactorAuth.setUser(user);
         twoFactorAuth.setCode(code);
+
         twoFactorAuth.setExpiresAt(LocalDateTime.now().plusMinutes(5));
 
         // Guardar código en la base de datos
@@ -41,6 +41,8 @@ public class TwoFactorAuthService {
         } catch (Exception e) {
             throw new RuntimeException("Failed to send 2FA email", e);
         }
+
+        return twoFactorAuth.getExpiresAt();
     }
 
     public boolean verifyCode(User user, String code) {

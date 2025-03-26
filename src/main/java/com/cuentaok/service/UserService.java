@@ -159,11 +159,13 @@ public class UserService {
 
         // Si el usuario tiene 2FA activado, generar y enviar código
         if (user.isTwoFactorEnabled()) {
-            twoFactorAuthService.generateAndSend2FACode(user);
+            LocalDateTime expiresAt = twoFactorAuthService.generateAndSend2FACode(user);
             Map<String, String> response = new HashMap<>();
             response.put("message", "Código 2FA enviado a tu correo.");
+            response.put("expiresAt", expiresAt.toString());
             return response;
         }
+
 
         // Si no tiene 2FA, generar tokens directamente
         return generateTokens(user);
