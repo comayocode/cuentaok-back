@@ -25,6 +25,8 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
+import org.springframework.transaction.annotation.Transactional;
+
 @Service
 public class UserService {
 
@@ -34,19 +36,21 @@ public class UserService {
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
+    private final TwoFactorAuthService twoFactorAuthService;
 
     private static final int MAX_RESET_ATTEMPTS = 3;
     private static final Duration LOCK_DURATION = Duration.ofHours(1); // Bloqueo de 1 hora
     private static final int MAX_LOGIN_ATTEMPTS = 5; // Intentos fallidos antes del bloqueo
     private static final int LOCK_LOGIN_DURATION = 15; // Minutos bloqueado
 
-    public UserService(UserRepository userRepository, VerificationTokenRepository tokenRepository, JavaMailSender mailSender, JwtService jwtService, PasswordEncoder passwordEncoder, PasswordResetTokenRepository passwordResetTokenRepository) {
+    public UserService(UserRepository userRepository, VerificationTokenRepository tokenRepository, JavaMailSender mailSender, JwtService jwtService, PasswordEncoder passwordEncoder, PasswordResetTokenRepository passwordResetTokenRepository, TwoFactorAuthService twoFactorAuthService) {
         this.userRepository = userRepository;
         this.tokenRepository = tokenRepository;
         this.mailSender = mailSender;
         this.jwtService = jwtService;
         this.passwordEncoder = passwordEncoder;
         this.passwordResetTokenRepository = passwordResetTokenRepository;
+        this.twoFactorAuthService = twoFactorAuthService;
     }
 
     public User registerUser(String email, String password) {
@@ -119,7 +123,7 @@ public class UserService {
         sendVerificationEmail(user.getEmail(), newToken);
     }
 
-    public Map<String, String> login(String email, String password) {
+    public Map<String, String> loginWith2FA(String email, String password) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
@@ -153,13 +157,55 @@ public class UserService {
             throw new RuntimeException("Cuenta no verificada");
         }
 
-        String accessToken = jwtService.generateToken(email);
-        String refreshToken = jwtService.generateRefreshToken(email);
+        // Si el usuario tiene 2FA activado, generar y enviar código
+        if (user.isTwoFactorEnabled()) {
+            twoFactorAuthService.generateAndSend2FACode(user);
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Código 2FA enviado a tu correo.");
+            return response;
+        }
+
+        // Si no tiene 2FA, generar tokens directamente
+        return generateTokens(user);
+    }
+
+    public Map<String, String> verify2FA(String email, String code) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        boolean isValid = twoFactorAuthService.verifyCode(user, code);
+        if (!isValid) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Código 2FA incorrecto o expirado.");
+        }
+
+        // Si el código es válido, generar tokens
+        return generateTokens(user);
+    }
+
+    private Map<String, String> generateTokens(User user) {
+        String accessToken = jwtService.generateToken(user.getEmail());
+        String refreshToken = jwtService.generateRefreshToken(user.getEmail());
 
         Map<String, String> tokens = new HashMap<>();
         tokens.put("accessToken", accessToken);
         tokens.put("refreshToken", refreshToken);
         return tokens;
+    }
+
+    @Transactional
+    public void toggleTwoFactorAuthentication(String email, boolean enable, String password) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        // Si está desactivando 2FA, validar la contraseña
+        if (!enable) {
+            if (!passwordEncoder.matches(password, user.getPassword())) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Contraseña incorrecta");
+            }
+        }
+
+        user.setTwoFactorEnabled(enable);
+        userRepository.save(user);
     }
 
     public void requestPasswordReset(String email) {

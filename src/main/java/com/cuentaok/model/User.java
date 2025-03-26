@@ -44,6 +44,9 @@ public class User implements UserDetails {
     @Column(nullable = false)
     private int failedLoginAttempts = 0;
 
+    @Column(nullable = false)
+    private boolean twoFactorEnabled = false;
+
     public User(String email, String password, boolean verified) {
         this.email = email;
         this.password = password;

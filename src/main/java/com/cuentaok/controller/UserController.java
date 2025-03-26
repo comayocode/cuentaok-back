@@ -4,8 +4,12 @@ import com.cuentaok.dto.UserRequest;
 import com.cuentaok.model.User;
 import com.cuentaok.service.JwtService;
 import com.cuentaok.service.UserService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+
+import java.security.Principal;
 
 import java.util.Map;
 
@@ -53,7 +57,7 @@ public class UserController {
 
     @PostMapping("/login")
     public ResponseEntity<Map<String, String>> login(@RequestBody UserRequest request) {
-        return ResponseEntity.ok(userService.login(request.getEmail(), request.getPassword()));
+        return ResponseEntity.ok(userService.loginWith2FA(request.getEmail(), request.getPassword()));
     }
 
     @PostMapping("/refresh")
@@ -83,4 +87,33 @@ public class UserController {
         userService.resetPassword(token, newPassword);
         return ResponseEntity.ok("Tu contraseña ha sido actualizada correctamente.");
     }
+
+    @PutMapping("/user/2fa")
+    public ResponseEntity<String> toggleTwoFactorAuthentication(
+            @RequestBody Map<String, Object> request,
+            Principal principal) {
+
+        boolean enable = (boolean) request.get("enable");
+        String password = (String) request.get("password"); // Puede ser null si no se envía
+
+        userService.toggleTwoFactorAuthentication(principal.getName(), enable, password);
+        return ResponseEntity.ok(enable ? "2FA activado" : "2FA desactivado");
+    }
+
+
+
+    @PostMapping("/verify-2fa")
+    public ResponseEntity<Map<String, String>> verify2FA(@RequestBody Map<String, String> request) {
+        String email = request.get("email");
+        String code = request.get("code");
+
+        if (email == null || code == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email y código son requeridos.");
+        }
+
+        Map<String, String> tokens = userService.verify2FA(email, code);
+        return ResponseEntity.ok(tokens);
+    }
+
+
 }
