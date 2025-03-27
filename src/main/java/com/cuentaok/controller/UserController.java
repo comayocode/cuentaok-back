@@ -1,9 +1,12 @@
 package com.cuentaok.controller;
 import com.cuentaok.dto.UserRequest;
 
+import com.cuentaok.dto.Verify2FARequest;
 import com.cuentaok.model.User;
 import com.cuentaok.service.JwtService;
 import com.cuentaok.service.UserService;
+import jakarta.servlet.http.HttpServletRequest;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -56,8 +59,15 @@ public class UserController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<Map<String, String>> login(@RequestBody UserRequest request) {
-        return ResponseEntity.ok(userService.loginWith2FA(request.getEmail(), request.getPassword()));
+    public ResponseEntity<Map<String, String>> login(@RequestBody UserRequest request, HttpServletRequest httpRequest) {
+        String deviceId = extractDeviceId(httpRequest); // Extraer deviceId desde la request
+        return ResponseEntity.ok(userService.loginWith2FA(request.getEmail(), request.getPassword(), deviceId));
+    }
+
+    private String extractDeviceId(HttpServletRequest request) {
+        String userAgent = request.getHeader("User-Agent"); // Obtener User-Agent
+        String ip = request.getRemoteAddr(); // Obtener IP del usuario
+        return DigestUtils.sha256Hex(userAgent + ip); // Generar un hash único como deviceId
     }
 
     @PostMapping("/refresh")
@@ -103,15 +113,8 @@ public class UserController {
 
 
     @PostMapping("/verify-2fa")
-    public ResponseEntity<Map<String, String>> verify2FA(@RequestBody Map<String, String> request) {
-        String email = request.get("email");
-        String code = request.get("code");
-
-        if (email == null || code == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Email y código son requeridos.");
-        }
-
-        Map<String, String> tokens = userService.verify2FA(email, code);
+    public ResponseEntity<Map<String, String>> verify2FA(@RequestBody Verify2FARequest request, HttpServletRequest httpRequest) {
+        Map<String, String> tokens = userService.verify2FA(request.getEmail(), request.getCode(), request.isRememberDevice(), httpRequest);
         return ResponseEntity.ok(tokens);
     }
 

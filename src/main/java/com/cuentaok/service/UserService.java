@@ -2,6 +2,8 @@ package com.cuentaok.service;
 
 import com.cuentaok.model.PasswordResetToken;
 import com.cuentaok.repository.PasswordResetTokenRepository;
+import jakarta.servlet.http.HttpServletRequest;
+import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import com.cuentaok.model.User;
@@ -38,12 +40,14 @@ public class UserService {
     private final PasswordEncoder passwordEncoder;
     private final TwoFactorAuthService twoFactorAuthService;
 
+    private final TrustedDeviceService trustedDeviceService;
+
     private static final int MAX_RESET_ATTEMPTS = 3;
     private static final Duration LOCK_DURATION = Duration.ofHours(1); // Bloqueo de 1 hora
     private static final int MAX_LOGIN_ATTEMPTS = 5; // Intentos fallidos antes del bloqueo
     private static final int LOCK_LOGIN_DURATION = 15; // Minutos bloqueado
 
-    public UserService(UserRepository userRepository, VerificationTokenRepository tokenRepository, JavaMailSender mailSender, JwtService jwtService, PasswordEncoder passwordEncoder, PasswordResetTokenRepository passwordResetTokenRepository, TwoFactorAuthService twoFactorAuthService) {
+    public UserService(UserRepository userRepository, VerificationTokenRepository tokenRepository, JavaMailSender mailSender, JwtService jwtService, PasswordEncoder passwordEncoder, PasswordResetTokenRepository passwordResetTokenRepository, TwoFactorAuthService twoFactorAuthService, TrustedDeviceService trustedDeviceService) {
         this.userRepository = userRepository;
         this.tokenRepository = tokenRepository;
         this.mailSender = mailSender;
@@ -51,6 +55,7 @@ public class UserService {
         this.passwordEncoder = passwordEncoder;
         this.passwordResetTokenRepository = passwordResetTokenRepository;
         this.twoFactorAuthService = twoFactorAuthService;
+        this.trustedDeviceService = trustedDeviceService;
     }
 
     public User registerUser(String email, String password) {
@@ -123,9 +128,20 @@ public class UserService {
         sendVerificationEmail(user.getEmail(), newToken);
     }
 
-    public Map<String, String> loginWith2FA(String email, String password) {
+    private String extractDeviceId(HttpServletRequest request) {
+        String userAgent = request.getHeader("User-Agent"); // Datos del navegador/dispositivo
+        String ipAddress = request.getRemoteAddr(); // IP del usuario
+
+        // Crear un identificador único basado en la IP y el User-Agent
+        return DigestUtils.sha256Hex(userAgent + ipAddress);
+    }
+
+
+    public Map<String, String> loginWith2FA(String email, String password, String deviceId) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+
 
         // Verificar si la cuenta está bloqueada
         if (user.isAccountLocked()) {
@@ -159,6 +175,15 @@ public class UserService {
 
         // Si el usuario tiene 2FA activado, generar y enviar código
         if (user.isTwoFactorEnabled()) {
+
+            // Obtener deviceId desde los headers
+            //String deviceId = extractDeviceId(request);
+            boolean isTrusted = trustedDeviceService.isDeviceTrusted(user, deviceId);
+
+            if (isTrusted) {
+                return generateTokens(user); // 🔥 Si es confiable, saltamos el 2FA
+            }
+
             LocalDateTime expiresAt = twoFactorAuthService.generateAndSend2FACode(user);
             Map<String, String> response = new HashMap<>();
             response.put("message", "Código 2FA enviado a tu correo.");
@@ -171,13 +196,21 @@ public class UserService {
         return generateTokens(user);
     }
 
-    public Map<String, String> verify2FA(String email, String code) {
+    public Map<String, String> verify2FA(String email, String code, boolean rememberDevice, HttpServletRequest request) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
         boolean isValid = twoFactorAuthService.verifyCode(user, code);
         if (!isValid) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Código 2FA incorrecto o expirado.");
+        }
+
+        if (rememberDevice) {
+            String deviceId = extractDeviceId(request);
+            String userAgent = request.getHeader("User-Agent"); // Obtener el User-Agent
+            String ip = request.getRemoteAddr(); // Obtener la IP del usuario
+
+            trustedDeviceService.rememberDevice(user, deviceId, userAgent, ip);
         }
 
         // Si el código es válido, generar tokens
