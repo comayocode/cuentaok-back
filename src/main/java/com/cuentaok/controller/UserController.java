@@ -1,20 +1,26 @@
 package com.cuentaok.controller;
+import com.cuentaok.dto.TrustedDeviceResponse;
 import com.cuentaok.dto.UserRequest;
 
 import com.cuentaok.dto.Verify2FARequest;
 import com.cuentaok.model.User;
 import com.cuentaok.service.JwtService;
+import com.cuentaok.service.TrustedDeviceService;
 import com.cuentaok.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.security.Principal;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -22,10 +28,12 @@ public class UserController {
 
     private final UserService userService;
     private final JwtService jwtService;
+    private final TrustedDeviceService trustedDeviceService;
 
-    public UserController(UserService userService, JwtService jwtService) {
+    public UserController(UserService userService, JwtService jwtService, TrustedDeviceService trustedDeviceService) {
         this.userService = userService;
         this.jwtService = jwtService;
+        this.trustedDeviceService = trustedDeviceService;
     }
 
     @PostMapping("/register")
@@ -116,6 +124,32 @@ public class UserController {
     public ResponseEntity<Map<String, String>> verify2FA(@RequestBody Verify2FARequest request, HttpServletRequest httpRequest) {
         Map<String, String> tokens = userService.verify2FA(request.getEmail(), request.getCode(), request.isRememberDevice(), httpRequest);
         return ResponseEntity.ok(tokens);
+    }
+
+    @GetMapping("/trusted-devices")
+    public ResponseEntity<List<TrustedDeviceResponse>> getTrustedDevices() {
+        User user = userService.getAuthenticatedUser();
+        List<TrustedDeviceResponse> devices = trustedDeviceService.getTrustedDevices(user)
+                .stream()
+                .map(TrustedDeviceResponse::fromEntity)
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(devices);
+    }
+
+    @DeleteMapping("/trusted-devices/{deviceId}")
+    public ResponseEntity<?> removeTrustedDevice(
+            @PathVariable String deviceId,
+            @AuthenticationPrincipal UserDetails userDetails) {
+
+        boolean removed = trustedDeviceService.removeDevice(userDetails.getUsername(), deviceId);
+
+        if (removed) {
+            return ResponseEntity.ok(Collections.singletonMap("message", "Device removed successfully."));
+        } else {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Collections.singletonMap("error", "Device not found or unauthorized."));
+        }
     }
 
 

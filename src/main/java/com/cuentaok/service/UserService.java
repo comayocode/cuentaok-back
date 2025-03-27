@@ -1,10 +1,15 @@
 package com.cuentaok.service;
 
 import com.cuentaok.model.PasswordResetToken;
+import com.cuentaok.model.TrustedDevice;
 import com.cuentaok.repository.PasswordResetTokenRepository;
+import com.cuentaok.repository.TrustedDeviceRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import com.cuentaok.model.User;
 import com.cuentaok.repository.UserRepository;
@@ -25,6 +30,7 @@ import jakarta.mail.internet.MimeMessage;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.transaction.annotation.Transactional;
@@ -41,13 +47,14 @@ public class UserService {
     private final TwoFactorAuthService twoFactorAuthService;
 
     private final TrustedDeviceService trustedDeviceService;
+    private final TrustedDeviceRepository trustedDeviceRepository;
 
     private static final int MAX_RESET_ATTEMPTS = 3;
     private static final Duration LOCK_DURATION = Duration.ofHours(1); // Bloqueo de 1 hora
     private static final int MAX_LOGIN_ATTEMPTS = 5; // Intentos fallidos antes del bloqueo
     private static final int LOCK_LOGIN_DURATION = 15; // Minutos bloqueado
 
-    public UserService(UserRepository userRepository, VerificationTokenRepository tokenRepository, JavaMailSender mailSender, JwtService jwtService, PasswordEncoder passwordEncoder, PasswordResetTokenRepository passwordResetTokenRepository, TwoFactorAuthService twoFactorAuthService, TrustedDeviceService trustedDeviceService) {
+    public UserService(UserRepository userRepository, VerificationTokenRepository tokenRepository, JavaMailSender mailSender, JwtService jwtService, PasswordEncoder passwordEncoder, PasswordResetTokenRepository passwordResetTokenRepository, TwoFactorAuthService twoFactorAuthService, TrustedDeviceService trustedDeviceService, TrustedDeviceRepository trustedDeviceRepository) {
         this.userRepository = userRepository;
         this.tokenRepository = tokenRepository;
         this.mailSender = mailSender;
@@ -56,6 +63,7 @@ public class UserService {
         this.passwordResetTokenRepository = passwordResetTokenRepository;
         this.twoFactorAuthService = twoFactorAuthService;
         this.trustedDeviceService = trustedDeviceService;
+        this.trustedDeviceRepository = trustedDeviceRepository;
     }
 
     public User registerUser(String email, String password) {
@@ -321,6 +329,27 @@ public class UserService {
         userRepository.save(user);
         // Eliminar el token usado
         passwordResetTokenRepository.delete(resetToken);
+    }
+
+    public User getAuthenticatedUser() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new UsernameNotFoundException("Usuario no autenticado");
+        }
+
+        String email = authentication.getName(); // Obtiene el email del usuario autenticado
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
+    }
+
+    public boolean removeDevice(String userEmail, String deviceId) {
+        Optional<TrustedDevice> device = trustedDeviceRepository.findByDeviceId(deviceId);
+
+        if (device.isPresent() && device.get().getUser().getEmail().equals(userEmail)) {
+            trustedDeviceRepository.delete(device.get());
+            return true;
+        }
+        return false;
     }
 
 

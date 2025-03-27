@@ -9,6 +9,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -21,6 +22,10 @@ public interface TrustedDeviceRepository extends JpaRepository<TrustedDevice, Lo
     void deleteExpiredDevices();
     // Verificar si hay un dispositivo confiable para x usuario con x deviceId y con fecha aún válida
     boolean existsByUserAndDeviceIdAndExpiresAtAfter(User user, String deviceId, LocalDateTime currentTime);
+    List<TrustedDevice> findByUser(User user);
+    Optional<TrustedDevice> findByDeviceId(String deviceId);
+
+
 
 }
 
