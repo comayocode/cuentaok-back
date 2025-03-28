@@ -4,6 +4,7 @@ import com.cuentaok.dto.UserRequest;
 
 import com.cuentaok.dto.Verify2FARequest;
 import com.cuentaok.model.User;
+import com.cuentaok.repository.UserRepository;
 import com.cuentaok.service.JwtService;
 import com.cuentaok.service.TrustedDeviceService;
 import com.cuentaok.service.UserService;
@@ -13,6 +14,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
@@ -29,6 +31,7 @@ public class UserController {
     private final UserService userService;
     private final JwtService jwtService;
     private final TrustedDeviceService trustedDeviceService;
+    private UserRepository userRepository;
 
     public UserController(UserService userService, JwtService jwtService, TrustedDeviceService trustedDeviceService) {
         this.userService = userService;
@@ -86,7 +89,10 @@ public class UserController {
         }
 
         String email = jwtService.extractEmail(refreshToken);
-        String newAccessToken = jwtService.generateToken(email);
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        String newAccessToken = jwtService.generateToken(user);
 
         return ResponseEntity.ok(Map.of("accessToken", newAccessToken));
     }

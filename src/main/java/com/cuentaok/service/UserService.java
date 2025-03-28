@@ -226,7 +226,7 @@ public class UserService {
     }
 
     private Map<String, String> generateTokens(User user) {
-        String accessToken = jwtService.generateToken(user.getEmail());
+        String accessToken = jwtService.generateToken(user);
         String refreshToken = jwtService.generateRefreshToken(user.getEmail());
 
         Map<String, String> tokens = new HashMap<>();

@@ -10,7 +10,10 @@ import  com.cuentaok.repository.TrustedDeviceRepository;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import lombok.extern.slf4j.Slf4j;
 
+
+@Slf4j
 @Service
 public class TrustedDeviceService {
 
