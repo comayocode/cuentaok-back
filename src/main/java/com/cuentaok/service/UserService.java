@@ -5,6 +5,7 @@ import com.cuentaok.model.TrustedDevice;
 import com.cuentaok.repository.PasswordResetTokenRepository;
 import com.cuentaok.repository.TrustedDeviceRepository;
 import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.beans.factory.annotation.Value;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
@@ -50,9 +51,12 @@ public class UserService {
     private final TrustedDeviceRepository trustedDeviceRepository;
 
     private static final int MAX_RESET_ATTEMPTS = 3;
-    private static final Duration LOCK_DURATION = Duration.ofHours(1); // Bloqueo de 1 hora
+    private static final Duration LOCK_DURATION = Duration.ofMinutes(1); // Bloqueo de 1 hora
     private static final int MAX_LOGIN_ATTEMPTS = 5; // Intentos fallidos antes del bloqueo
-    private static final int LOCK_LOGIN_DURATION = 15; // Minutos bloqueado
+    private static final int LOCK_LOGIN_DURATION = 1; // Minutos bloqueado
+
+    @Value("${frontend.url}")
+    private String frontendUrl;
 
     public UserService(UserRepository userRepository, VerificationTokenRepository tokenRepository, JavaMailSender mailSender, JwtService jwtService, PasswordEncoder passwordEncoder, PasswordResetTokenRepository passwordResetTokenRepository, TwoFactorAuthService twoFactorAuthService, TrustedDeviceService trustedDeviceService, TrustedDeviceRepository trustedDeviceRepository) {
         this.userRepository = userRepository;
@@ -291,7 +295,7 @@ public class UserService {
     }
 
     private void sendPasswordResetEmail(String email, String token) {
-        String url = "http://localhost:8080/api/auth/reset-password?token=" + token;
+        String url = frontendUrl + "/reset-password?token=" + token;
         String subject = "Restablecer contraseña";
         String message = "<p>Haz clic en el siguiente enlace para restablecer tu contraseña:</p>"
                 + "<a href=\"" + url + "\">Restablecer contraseña</a>";

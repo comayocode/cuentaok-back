@@ -39,6 +39,6 @@ public class TrustedDevice {
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
-        this.expiresAt = this.createdAt.plusMinutes(5);
+        this.expiresAt = this.createdAt.plusDays(15);
     }
 }
