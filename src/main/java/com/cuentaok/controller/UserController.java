@@ -1,4 +1,5 @@
 package com.cuentaok.controller;
+import com.cuentaok.dto.ApiResponse;
 import com.cuentaok.dto.TrustedDeviceResponse;
 import com.cuentaok.dto.UserRequest;
 
@@ -9,6 +10,7 @@ import com.cuentaok.service.JwtService;
 import com.cuentaok.service.TrustedDeviceService;
 import com.cuentaok.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +25,8 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -40,13 +44,9 @@ public class UserController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<String> registerUser(@RequestBody UserRequest request) {
-        try {
-            User user = userService.registerUser(request.getEmail(), request.getPassword());
-            return ResponseEntity.ok("Usuario registrado con éxito. Verifique su correo electrónico.");
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+    public ResponseEntity<ApiResponse<Void>> registerUser(@Valid @RequestBody UserRequest request) {
+        User user = userService.registerUser(request.getFirstName(), request.getLastName(), request.getEmail(), request.getPassword());
+        return ApiResponse.ok("Usuario registrado con éxito. Verifique su correo electrónico para activar la cuenta.");
     }
 
     @GetMapping("/verify")

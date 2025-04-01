@@ -70,12 +70,12 @@ public class UserService {
         this.trustedDeviceRepository = trustedDeviceRepository;
     }
 
-    public User registerUser(String email, String password) {
+    public User registerUser(String firsName, String lastName, String email, String password) {
         if (userRepository.existsByEmail(email)) {
             throw new RuntimeException("El correo ya está registrado.");
         }
 
-        User user = new User(email, passwordEncoder.encode(password), false);
+        User user = new User(firsName, lastName, email, passwordEncoder.encode(password), false);
         userRepository.save(user);
 
         // Generar y guardar el token
