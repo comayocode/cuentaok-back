@@ -8,24 +8,38 @@
         body {
             font-family: Arial, sans-serif;
             background-color: #f4f4f4;
-            padding: 20px;
+            margin: 0;
+            padding: 40px 0;
+            text-align: center;
         }
-        .container {
+        .email-container {
             background-color: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            padding: 30px;
+            border: 1px solid #d4d4d4;
+            border-radius: 15px;
+            width: 400px;
+            margin: 0 auto;
+        }
+        .header__img {
+            width: 120px;
+
         }
         h2 {
             color: #333;
+            font-size: 28px;
+            margin-bottom: 15px;
+        }
+        h3 {
+            color: #555;
         }
         p {
             color: #555;
             line-height: 1.6;
+            text-align: center;
         }
-        .button { /* Estilo para botones/link */
+        .button {
             display: inline-block;
-            background-color: #4CAF50;
+            background-color: #6365f0;
             color: white !important;
             padding: 12px 24px;
             text-align: center;
@@ -34,37 +48,108 @@
             font-weight: bold;
             margin: 15px 0;
         }
-        .link { /* Estilo link solo */
+        .button:visited {
+            color: white !important;
+            text-decoration: none !important;
+        }
+        .link {
             color: #0066cc;
             word-break: break-all;
         }
-        .code { /* Estilo para código 2FA */
+        .code {
             font-size: 24px;
-            letter-spacing: 3px;
+            letter-spacing: 4px;
             color: #0066cc;
             font-weight: bold;
-            margin: 20px 0;
+            margin: 20px 0 0 0;
+            text-align: center;
+        }
+        .cheers {
+            text-align: center;
+        }
+        .footer {
+            background-color: #F2EFF3;
+            border-radius: 4px;
+            padding: 20px 30px;
+            margin-top: 20px;
+        }
+        .footer__text {
+            font-size: 12px;
+            text-align: center;
+        }
+        .help:hover {
+            color: #6365f0 !important;
+            text-decoration: underline !important;
+        }
+        .content__btn,
+        .content__code {
+            text-align: center;
+            margin: 0 auto;
+        }
+        @media only screen and (max-width: 480px) {
+            .container {
+                width: 90%;
+                padding: 20px;
+            }
         }
     </style>
 </head>
 <body>
-<div class="container">
-    <h2>¡Hola, <span th:text="${nombre}"></span>!</h2>
-    <p th:text="${mensaje}"></p>
+<!-- Tabla contenedora principal -->
+<table class="email-table" border="0" cellpadding="0" cellspacing="0" width="100%">
+    <tr>
+        <td align="center" valign="top">
+            <!-- Tabla del contenedor del email -->
+            <table class="email-container" border="0" cellpadding="0" cellspacing="0">
+                <!-- Header -->
+                <tr>
+                    <td align="center" style="padding: 20px 0;">
+                        <img class="header__img" src="https://i.ibb.co/HpNZL1z1/logo.png" alt="logo Monii" style="width: 120px;">
+                    </td>
+                </tr>
+                <tr>
+                    <td align="center">
+                        <h2 style="color: #333; font-size: 28px; margin-bottom: 15px;">¡Hola, <span th:text="${nombre}"></span>!</h2>
+                    </td>
+                </tr>
 
-    <!-- Bloque dinámico según tipo de email -->
-    <div th:if="${tipo == 'link'}">
-        <a th:href="${contenidoPrincipal}" class="button" th:text="${textoBoton}"></a>
-        <p>Si el botón no funciona, copia y pega este enlace:</p>
-        <a th:href="${contenidoPrincipal}" th:text="${contenidoPrincipal}"></a>
-    </div>
+                <!-- Contenido dinámico -->
+                <tr>
+                    <td>
+                        <p class="content__message" th:text="${mensaje}" style="color: #555; line-height: 1.6; text-align: center; margin-bottom: 0"></p>
+                    </td>
+                </tr>
 
-    <div th:if="${tipo == 'codigo'}">
-        <div class="code" th:text="${contenidoPrincipal}"></div>
-        <p th:text="'Expira en: ' + ${expiracion}"></p>
-    </div>
+                <!-- Bloque para enlace -->
+                <tr th:if="${tipo == 'link'}">
+                    <td align="center" style="padding: 15px 0;">
+                        <a th:href="${contenidoPrincipal}" class="button" th:text="${textoBoton}"></a>
+                        <p style="color: #555;">Si el botón no funciona, copia y pega este enlace:</p>
+                        <a th:href="${contenidoPrincipal}" th:text="${contenidoPrincipal}" style="color: #555; word-break: break-all; text-decoration: none;"></a>
+                    </td>
+                </tr>
 
-    <p>Saludos,<br>El equipo de CuentaOk</p>
-</div>
+                <!-- Bloque para código -->
+                <tr th:if="${tipo == 'codigo'}">
+                    <td align="center" style="padding: 15px 0;">
+                        <div th:text="${contenidoPrincipal}" style="font-size: 24px; letter-spacing: 4px; color: #6365f0; font-weight: bold;"></div>
+                        <p th:text="'Expira en: ' + ${expiracion}" style="color: #555;"></p>
+                    </td>
+                </tr>
+
+                <!-- Cierre y footer - Sin separación entre filas -->
+                <tr>
+                    <td align="center" style="padding-top: 20px; border-top: 1px solid #eeeeee;">
+                        <p style="color: #555; margin-bottom: 15px;">Monii Team 🚀</p>
+                    </td>
+                </tr><tr>
+                <td class="footer" align="center" style="padding-bottom: 20px;">
+                    <p class="footer__text" style="font-size: 12px; color: #555;">Recibes este email porque creaste una cuenta en Moniiapp.com. Para obtener más información, visita nuestro <a class="help" href="#" style="color: #555; text-decoration: underline;">Centro de ayuda</a>.</p>
+                </td>
+            </tr>
+            </table>
+        </td>
+    </tr>
+</table>
 </body>
 </html>

@@ -24,10 +24,7 @@ import java.util.Map;
 import com.cuentaok.model.VerificationToken;
 import com.cuentaok.repository.VerificationTokenRepository;
 import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 
-import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
@@ -72,6 +69,11 @@ public class UserService {
         this.emailService = emailService;
     }
 
+    private User searchUser (String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+    }
+
     public User registerUser(String firsName, String lastName, String email, String password) {
         if (userRepository.existsByEmail(email)) {
             throw new RuntimeException("El correo ya está registrado.");
@@ -92,11 +94,12 @@ public class UserService {
     }
 
     private void sendVerificationEmail(String email, String token) {
+        User user = searchUser(email);
         String url = "http://localhost:8080/api/auth/verify?token=" + token;
         emailService.sendDynamicEmail(
                 email,
                 "Verifica tu cuenta en CuentaOk",
-                email, // nombre
+                user.getFirstName(), // nombre
                 "Gracias por registrarte. Haz clic en el botón para completar la verificación:",
                 "link", // tipo
                 url, // contenidoPrincipal (URL)
@@ -293,12 +296,13 @@ public class UserService {
     }
 
     private void sendPasswordResetEmail(String email, String token) {
+        User user = searchUser(email);
         String url = frontendUrl + "/reset-password?token=" + token;
 
         emailService.sendDynamicEmail(
                 email,
                 "Restablece tu contraseña en CuentaOk",
-                email,
+                user.getFirstName(),
                 "Haz clic en el botón para crear una nueva contraseña:",
                 "link", // tipo
                 url, // contenidoPrincipal (URL)

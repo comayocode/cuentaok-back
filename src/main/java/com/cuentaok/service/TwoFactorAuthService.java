@@ -40,12 +40,12 @@ public class TwoFactorAuthService {
             emailService.sendDynamicEmail(
                     user.getEmail(),
                     "Tu código de verificación en CuentaOk",
-                    user.getEmail(),
+                    user.getFirstName(),
                     "Usa este código para iniciar sesión:",
                     "codigo", // tipo
                     code, // contenidoPrincipal (código)
                     null, // textoBoton (no aplica)
-                    "5 minutos" // expiracion
+                    "5 Minutos" // expiracion
             );
         } catch (Exception e) {
             throw new RuntimeException("Failed to send 2FA email", e);
