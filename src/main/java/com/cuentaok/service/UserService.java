@@ -49,6 +49,7 @@ public class UserService {
 
     private final TrustedDeviceService trustedDeviceService;
     private final TrustedDeviceRepository trustedDeviceRepository;
+    private final EmailService emailService;
 
     private static final int MAX_RESET_ATTEMPTS = 3;
     private static final Duration LOCK_DURATION = Duration.ofMinutes(1); // Bloqueo de 1 hora
@@ -58,7 +59,7 @@ public class UserService {
     @Value("${frontend.url}")
     private String frontendUrl;
 
-    public UserService(UserRepository userRepository, VerificationTokenRepository tokenRepository, JavaMailSender mailSender, JwtService jwtService, PasswordEncoder passwordEncoder, PasswordResetTokenRepository passwordResetTokenRepository, TwoFactorAuthService twoFactorAuthService, TrustedDeviceService trustedDeviceService, TrustedDeviceRepository trustedDeviceRepository) {
+    public UserService(UserRepository userRepository, VerificationTokenRepository tokenRepository, JavaMailSender mailSender, JwtService jwtService, PasswordEncoder passwordEncoder, PasswordResetTokenRepository passwordResetTokenRepository, TwoFactorAuthService twoFactorAuthService, TrustedDeviceService trustedDeviceService, TrustedDeviceRepository trustedDeviceRepository, EmailService emailService) {
         this.userRepository = userRepository;
         this.tokenRepository = tokenRepository;
         this.mailSender = mailSender;
@@ -68,6 +69,7 @@ public class UserService {
         this.twoFactorAuthService = twoFactorAuthService;
         this.trustedDeviceService = trustedDeviceService;
         this.trustedDeviceRepository = trustedDeviceRepository;
+        this.emailService = emailService;
     }
 
     public User registerUser(String firsName, String lastName, String email, String password) {
@@ -91,20 +93,16 @@ public class UserService {
 
     private void sendVerificationEmail(String email, String token) {
         String url = "http://localhost:8080/api/auth/verify?token=" + token;
-        String subject = "Verifica tu cuenta";
-        String message = "<p>Gracias por registrarte. Haz clic en el siguiente enlace para verificar tu cuenta:</p>"
-                + "<a href=\"" + url + "\">Verificar cuenta</a>";
-
-        try {
-            MimeMessage mail = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(mail, true);
-            helper.setTo(email);
-            helper.setSubject(subject);
-            helper.setText(message, true);
-            mailSender.send(mail);
-        } catch (MessagingException e) {
-            throw new RuntimeException("Error al enviar el email");
-        }
+        emailService.sendDynamicEmail(
+                email,
+                "Verifica tu cuenta en CuentaOk",
+                email, // nombre
+                "Gracias por registrarte. Haz clic en el botón para completar la verificación:",
+                "link", // tipo
+                url, // contenidoPrincipal (URL)
+                "Verificar mi cuenta", // textoBoton
+                null // expiracion (no aplica)
+        );
     }
 
     public void verifyUser(String token) {
@@ -296,20 +294,17 @@ public class UserService {
 
     private void sendPasswordResetEmail(String email, String token) {
         String url = frontendUrl + "/reset-password?token=" + token;
-        String subject = "Restablecer contraseña";
-        String message = "<p>Haz clic en el siguiente enlace para restablecer tu contraseña:</p>"
-                + "<a href=\"" + url + "\">Restablecer contraseña</a>";
 
-        try {
-            MimeMessage mail = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(mail, true);
-            helper.setTo(email);
-            helper.setSubject(subject);
-            helper.setText(message, true);
-            mailSender.send(mail);
-        } catch (MessagingException e) {
-            throw new RuntimeException("Error al enviar el email");
-        }
+        emailService.sendDynamicEmail(
+                email,
+                "Restablece tu contraseña en CuentaOk",
+                email,
+                "Haz clic en el botón para crear una nueva contraseña:",
+                "link", // tipo
+                url, // contenidoPrincipal (URL)
+                "Restablecer contraseña", // textoBoton
+                null // expiracion (no aplica)
+        );
     }
 
     public void resetPassword(String token, String newPassword) {

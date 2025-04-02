@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -21,6 +21,29 @@
         }
         p {
             color: #555;
+            line-height: 1.6;
+        }
+        .button { /* Estilo para botones/link */
+            display: inline-block;
+            background-color: #4CAF50;
+            color: white !important;
+            padding: 12px 24px;
+            text-align: center;
+            text-decoration: none;
+            border-radius: 4px;
+            font-weight: bold;
+            margin: 15px 0;
+        }
+        .link { /* Estilo link solo */
+            color: #0066cc;
+            word-break: break-all;
+        }
+        .code { /* Estilo para código 2FA */
+            font-size: 24px;
+            letter-spacing: 3px;
+            color: #0066cc;
+            font-weight: bold;
+            margin: 20px 0;
         }
     </style>
 </head>
@@ -28,6 +51,19 @@
 <div class="container">
     <h2>¡Hola, <span th:text="${nombre}"></span>!</h2>
     <p th:text="${mensaje}"></p>
+
+    <!-- Bloque dinámico según tipo de email -->
+    <div th:if="${tipo == 'link'}">
+        <a th:href="${contenidoPrincipal}" class="button" th:text="${textoBoton}"></a>
+        <p>Si el botón no funciona, copia y pega este enlace:</p>
+        <a th:href="${contenidoPrincipal}" th:text="${contenidoPrincipal}"></a>
+    </div>
+
+    <div th:if="${tipo == 'codigo'}">
+        <div class="code" th:text="${contenidoPrincipal}"></div>
+        <p th:text="'Expira en: ' + ${expiracion}"></p>
+    </div>
+
     <p>Saludos,<br>El equipo de CuentaOk</p>
 </div>
 </body>
