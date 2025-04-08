@@ -123,14 +123,14 @@ public class UserService {
         tokenRepository.delete(verificationToken);  // Eliminar el token después de la verificación
     }
 
-    public void resendVerificationEmail(String email) {
+    public VerificationToken resendVerificationEmail(String email) {
         // Buscar el usuario por email
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
 
         // Verificar si ya está verificado
         if (user.isVerified()) {
-            throw new RuntimeException("Este usuario ya está verificado.");
+            throw new BusinessException("Este usuario ya está verificado.", HttpStatus.BAD_REQUEST.value());
         }
 
         // Eliminar el token anterior si existe
@@ -143,6 +143,8 @@ public class UserService {
 
         // Enviar el correo con el nuevo token
         sendVerificationEmail(user.getEmail(), newToken);
+
+        return verificationToken;
     }
 
     private String extractDeviceId(HttpServletRequest request) {

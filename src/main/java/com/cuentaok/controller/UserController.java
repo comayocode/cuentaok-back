@@ -1,4 +1,5 @@
 package com.cuentaok.controller;
+import com.cuentaok.Exception.BusinessException;
 import com.cuentaok.Exception.ResourceNotFoundException;
 import com.cuentaok.dto.ApiResponse;
 import com.cuentaok.dto.TrustedDeviceResponse;
@@ -6,6 +7,7 @@ import com.cuentaok.dto.UserRequest;
 
 import com.cuentaok.dto.Verify2FARequest;
 import com.cuentaok.model.User;
+import com.cuentaok.model.VerificationToken;
 import com.cuentaok.repository.UserRepository;
 import com.cuentaok.service.JwtService;
 import com.cuentaok.service.TrustedDeviceService;
@@ -13,6 +15,7 @@ import com.cuentaok.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.apache.commons.codec.digest.DigestUtils;
+import org.springframework.cglib.core.Local;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -22,6 +25,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.security.Principal;
 
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -65,13 +69,10 @@ public class UserController {
     }
 
     @PostMapping("/resend-verification")
-    public ResponseEntity<String> resendVerification(@RequestBody UserRequest request) {
-        try {
-            userService.resendVerificationEmail(request.getEmail());
-            return ResponseEntity.ok("Se ha enviado un nuevo correo de verificación.");
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
-        }
+    public ResponseEntity<ApiResponse<Map<String, LocalDateTime>>> resendVerification(@RequestBody UserRequest request) {
+        VerificationToken token = userService.resendVerificationEmail(request.getEmail());
+        Map<String, LocalDateTime> responseData = Map.of("expiresAt", token.getExpiryDate());
+        return ResponseEntity.ok(ApiResponse.ok("Se ha enviado un nuevo correo de verificación.", responseData));
     }
 
     @PostMapping("/login")
