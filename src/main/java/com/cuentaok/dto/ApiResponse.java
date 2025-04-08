@@ -1,17 +1,24 @@
 package com.cuentaok.dto;
-import lombok.Data;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import java.time.LocalDateTime;
 
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
+
 @Data
+@Getter
+@Setter
+@AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class ApiResponse<T> {
     private int status;
     private String message;
-    private LocalDateTime timestamp;
     private T data;
+    private LocalDateTime timestamp;
 
-    // Constructor principal
+    // Constructor privado para forzar el uso de los métodos estáticos
     private ApiResponse(int status, String message, T data) {
         this.status = status;
         this.message = message;
@@ -19,17 +26,24 @@ public class ApiResponse<T> {
         this.timestamp = LocalDateTime.now();
     }
 
-    // Métodos estáticos para éxito (con retorno de data)
-    public static <T> ResponseEntity<ApiResponse<T>> ok(String message, T data) {
-        return ResponseEntity.ok(new ApiResponse<>(HttpStatus.OK.value(), message, data));
+    // Métodos estáticos para crear respuestas exitosas
+    public static <T> ApiResponse<T> ok(T data) {
+        return new ApiResponse<>(200, "Operación exitosa", data);
     }
 
-    // Métodos para éxito (sin retorno de data)
-    public static ResponseEntity<ApiResponse<Void>> ok(String message) {
-        return ok(message, null);
+    public static <T> ApiResponse<T> ok(String message, T data) {
+        return new ApiResponse<>(200, message, data);
     }
 
-    // Métodos para errores (opcional)
+    public static ApiResponse<Void> ok(String message) {
+        return new ApiResponse<>(200, message, null);
+    }
+
+    // Métodos estáticos para crear respuestas de error
+    public static <T> ApiResponse<T> error(int status, String message) {
+        return new ApiResponse<>(status, message, null);
+    }
+
     public static <T> ApiResponse<T> error(int status, String message, T data) {
         return new ApiResponse<>(status, message, data);
     }

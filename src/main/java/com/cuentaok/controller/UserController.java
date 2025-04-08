@@ -1,4 +1,5 @@
 package com.cuentaok.controller;
+import com.cuentaok.Exception.ResourceNotFoundException;
 import com.cuentaok.dto.ApiResponse;
 import com.cuentaok.dto.TrustedDeviceResponse;
 import com.cuentaok.dto.UserRequest;
@@ -45,8 +46,12 @@ public class UserController {
 
     @PostMapping("/register")
     public ResponseEntity<ApiResponse<Void>> registerUser(@Valid @RequestBody UserRequest request) {
-        User user = userService.registerUser(request.getFirstName(), request.getLastName(), request.getEmail(), request.getPassword());
-        return ApiResponse.ok("Usuario registrado con éxito. Verifique su correo electrónico para activar la cuenta.");
+        try {
+            User user = userService.registerUser(request.getFirstName(), request.getLastName(), request.getEmail(), request.getPassword());
+            return ResponseEntity.ok(ApiResponse.ok("Usuario registrado con éxito. Verifique su correo electrónico para activar la cuenta."));
+        } catch (ResourceNotFoundException ex) {
+            throw ex;
+        }
     }
 
     @GetMapping("/verify")

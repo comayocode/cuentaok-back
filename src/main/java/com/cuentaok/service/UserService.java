@@ -1,5 +1,9 @@
 package com.cuentaok.service;
 
+import com.cuentaok.Exception.AccountNotVerifiedException;
+import com.cuentaok.Exception.BusinessException;
+import com.cuentaok.Exception.ResourceNotFoundException;
+import com.cuentaok.dto.ApiResponse;
 import com.cuentaok.model.PasswordResetToken;
 import com.cuentaok.model.TrustedDevice;
 import com.cuentaok.repository.PasswordResetTokenRepository;
@@ -152,7 +156,7 @@ public class UserService {
 
     public Map<String, String> loginWith2FA(String email, String password, String deviceId) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+                .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
 
 
 
@@ -183,7 +187,15 @@ public class UserService {
         }
 
         if (!user.isVerified()) {
-            throw new RuntimeException("Cuenta no verificada");
+            VerificationToken verificationToken = tokenRepository.findByUser(user)
+                    .orElseThrow(() -> new BusinessException(
+                            "Token de verificación expirado",
+                            HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                            Map.of(
+                                    "email", email
+                            )
+                    ));
+            throw new AccountNotVerifiedException("Cuenta no verificada, revisa tu correo para activarla.", email, verificationToken.getExpiryDate());
         }
 
         // Si el usuario tiene 2FA activado, generar y enviar código
