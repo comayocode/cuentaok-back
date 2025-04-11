@@ -99,7 +99,8 @@ public class UserService {
 
     private void sendVerificationEmail(String email, String token) {
         User user = searchUser(email);
-        String url = "http://localhost:8080/api/auth/verify?token=" + token;
+        String url = frontendUrl + "/verify-account-pending?token=" + token;
+
         emailService.sendDynamicEmail(
                 email,
                 "Verifica tu cuenta en CuentaOk",
@@ -114,7 +115,7 @@ public class UserService {
 
     public void verifyUser(String token) {
         VerificationToken verificationToken = tokenRepository.findByToken(token)
-                .orElseThrow(() -> new RuntimeException("Token inválido o expirado"));
+                .orElseThrow(() -> new BusinessException("Token inválido o expirado.", HttpStatus.FORBIDDEN.value()));
 
         User user = verificationToken.getUser();
         user.setVerified(true);  // Marcar al usuario como verificado

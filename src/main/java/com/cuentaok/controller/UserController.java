@@ -1,11 +1,8 @@
 package com.cuentaok.controller;
 import com.cuentaok.Exception.BusinessException;
 import com.cuentaok.Exception.ResourceNotFoundException;
-import com.cuentaok.dto.ApiResponse;
-import com.cuentaok.dto.TrustedDeviceResponse;
-import com.cuentaok.dto.UserRequest;
+import com.cuentaok.dto.*;
 
-import com.cuentaok.dto.Verify2FARequest;
 import com.cuentaok.model.User;
 import com.cuentaok.model.VerificationToken;
 import com.cuentaok.repository.UserRepository;
@@ -58,13 +55,13 @@ public class UserController {
         }
     }
 
-    @GetMapping("/verify")
-    public ResponseEntity<String> verifyUser(@RequestParam String token) {
+    @PostMapping("/verify")
+    public ResponseEntity<ApiResponse<Void>> verifyUser(@RequestBody VerifyAccount request) {
         try {
-            userService.verifyUser(token);
-            return ResponseEntity.ok("Cuenta verificada con éxito.");
-        } catch (RuntimeException e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            userService.verifyUser(request.getToken());
+            return ResponseEntity.ok(ApiResponse.ok("Cuenta verificada exitosamente"));
+        } catch (BusinessException ex) {
+            throw ex;
         }
     }
 
