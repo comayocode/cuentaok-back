@@ -118,9 +118,16 @@ public class UserService {
                 .orElseThrow(() -> new BusinessException("Token inválido o expirado.", HttpStatus.FORBIDDEN.value()));
 
         User user = verificationToken.getUser();
+
+        // Respuesta exitosa si ya está verificado el usuario
+        if (user.isVerified()) {
+            tokenRepository.delete(verificationToken);
+            throw new BusinessException("La cuenta fue verificada", HttpStatus.OK.value());
+        }
+
+        // Si no está verificado
         user.setVerified(true);  // Marcar al usuario como verificado
         userRepository.save(user);
-
         tokenRepository.delete(verificationToken);  // Eliminar el token después de la verificación
     }
 

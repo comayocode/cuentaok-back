@@ -61,6 +61,10 @@ public class UserController {
             userService.verifyUser(request.getToken());
             return ResponseEntity.ok(ApiResponse.ok("Cuenta verificada exitosamente"));
         } catch (BusinessException ex) {
+            System.out.println("ERROR DE VERIFICACION" + ex);
+            if (ex.getMessage().contains("Token inválido")) {
+                throw new BusinessException("Token inválido o expirado", HttpStatus.BAD_REQUEST.value());
+            }
             throw ex;
         }
     }
