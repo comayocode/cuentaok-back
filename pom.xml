@@ -9,9 +9,9 @@
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.cuentaok</groupId>
-	<artifactId>CuentaOk</artifactId>
+	<artifactId>Monii</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>CuentaOk</name>
+	<name>Monii</name>
 	<description>Gestiona tus finanzas</description>
 	<url/>
 	<licenses>
