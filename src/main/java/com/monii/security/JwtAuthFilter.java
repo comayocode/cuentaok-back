@@ -18,6 +18,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
+import com.monii.model.User;
 
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
@@ -40,10 +41,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         if (token != null && jwtService.validateToken(token)) {
             String email = jwtService.extractUsername(token);
-            UserDetails userDetails = userDetailsService.loadUserByUsername(email);
+            User user = (User) userDetailsService.loadUserByUsername(email);
 
             UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(
-                    userDetails, null, userDetails.getAuthorities());
+                    user, null, user.getAuthorities());
 
             authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
             SecurityContextHolder.getContext().setAuthentication(authToken);

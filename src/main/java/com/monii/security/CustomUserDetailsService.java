@@ -42,10 +42,6 @@ public class CustomUserDetailsService implements UserDetailsService {
                     .collect(Collectors.toSet())
                 : Collections.emptySet(); // Si los roles están deshabilitados, devuelve un set vacío
 
-        return new org.springframework.security.core.userdetails.User(
-                user.getEmail(),
-                user.getPassword(),
-                authorities
-        );
+        return user;
     }
 }
